@@ -45,30 +45,29 @@ export async function handleMessage(client: Client, message: Message) {
 
     cooldowns.set(key, now);
 
-    // Optionally: check level up (simple formula)
-    const newLevel = calculateLevel(member.totalXp + xpAmount);
+    // Check level up using the updated totalXp from the upsert result
+    const newLevel = calculateLevel(member.totalXp);
     if (newLevel > member.level) {
       await prisma.member.update({ where: { id: member.id }, data: { level: newLevel } });
-      // send level up message
-      const channel = message.channel;
-      channel.send(`${message.author}, congratulations! You've reached level ${newLevel}!`);
+      // send level up message (best-effort)
+      try {
+        await message.channel.send(`${message.author}, congratulations! You've reached level ${newLevel}!`);
+      } catch (err) {
+        // ignore send errors
+      }
     }
   } catch (err) {
     console.error('handleMessage error', err);
   }
 }
 
-// Basic level formula: level = floor( (sqrt(1+8*totalXp/100)-1)/2 ) ?
-// For simplicity, we'll use level up every 100 * level XP (progressive)
+// Level system: required XP for level n = 100 * n * n
+export function xpForLevel(level: number) {
+  return 100 * level * level;
+}
+
 export function calculateLevel(totalXp: number) {
-  // simple: level = floor( (sqrt(1 + 8 * totalXp / 100) - 1) / 2 )
-  // but to keep simple linear growth: level ~ floor( (totalXp / 100)^(1/2) )
-  // We'll implement: required XP for level n = 100 * n * n
   let level = 1;
   while (totalXp >= xpForLevel(level + 1)) level++;
   return level;
-}
-
-export function xpForLevel(level: number) {
-  return 100 * level * level;
 }
