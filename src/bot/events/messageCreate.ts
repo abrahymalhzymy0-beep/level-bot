@@ -28,7 +28,10 @@ export async function handleMessage(client: Client, message: Message) {
     // grant XP for message
     const xpAmount = guild.textXpPerMessage;
 
-    // upsert member
+    // read member before update to capture prev values
+    const before = await prisma.member.findUnique({ where: { discordId_guildId: { discordId: userId, guildId } } });
+
+    // upsert member (increment XP)
     const member = await prisma.member.upsert({
       where: { discordId_guildId: { discordId: userId, guildId } },
       update: {
@@ -45,15 +48,15 @@ export async function handleMessage(client: Client, message: Message) {
 
     cooldowns.set(key, now);
 
-    // Check level up using the updated totalXp from the upsert result
+    // Check level up using the updated totalXp
     const newLevel = calculateLevel(member.totalXp);
-    if (newLevel > member.level) {
-      const prevLevel = member.level;
-      const prevTotal = member.totalXp;
+    const prevLevel = before?.level ?? 1;
+    const prevTotal = before?.totalXp ?? 0;
 
+    if (newLevel > prevLevel) {
       await prisma.member.update({ where: { id: member.id }, data: { level: newLevel } });
 
-      // create log for level up
+      // create log for level up (adminId = BOT)
       try {
         await prisma.log.create({
           data: {
