@@ -6,6 +6,7 @@ import Members from './pages/Members'
 import MemberDetail from './pages/MemberDetail'
 import Leaderboard from './pages/Leaderboard'
 import Settings from './pages/Settings'
+import Logs from './pages/Logs'
 import Login from './pages/Login'
 import Header from './components/Header'
 import './styles.css'
@@ -23,6 +24,7 @@ function App(){
             <Route path="/members/:guildId/:memberId" element={<MemberDetail/>} />
             <Route path="/leaderboard" element={<Leaderboard/>} />
             <Route path="/settings" element={<Settings/>} />
+            <Route path="/logs" element={<Logs/>} />
           </Routes>
         </main>
       </div>
