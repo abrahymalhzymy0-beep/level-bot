@@ -25,7 +25,12 @@ export async function handleVoiceStateUpdate(oldState: VoiceState, newState: Voi
     // If moved between channels (old and new exist but different)
     if (oldState.channel && newState.channel && oldState.channel.id !== newState.channel.id) {
       // treat as leaving old channel then joining new channel
-      const open = await prisma.voiceSession.findFirst({ where: { guildId, endAt: null }, orderBy: { startAt: 'desc' } });
+      // find member record for this user in this guild
+      let member = await prisma.member.findUnique({ where: { discordId_guildId: { discordId: userId, guildId } } });
+      if (!member) member = await prisma.member.create({ data: { discordId: userId, guildId } });
+
+      // find the open session for this member
+      const open = await prisma.voiceSession.findFirst({ where: { guildId, memberId: member.id, endAt: null }, orderBy: { startAt: 'desc' } });
       if (open) {
         const endAt = new Date();
         await prisma.voiceSession.update({ where: { id: open.id }, data: { endAt } });
@@ -42,8 +47,6 @@ export async function handleVoiceStateUpdate(oldState: VoiceState, newState: Voi
       }
 
       // create new session for new channel
-      let member = await prisma.member.findUnique({ where: { discordId_guildId: { discordId: userId, guildId } } });
-      if (!member) member = await prisma.member.create({ data: { discordId: userId, guildId } });
       await prisma.voiceSession.create({ data: { memberId: member.id, guildId, channelId: newState.channel.id, startAt: new Date() } });
     }
 
