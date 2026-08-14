@@ -3,8 +3,22 @@ import { prisma } from '../lib/prisma';
 
 const router = Router();
 
+// local helper to ensure user has manage perms for guild (duplicate of backend index check)
+function ensureGuildManagePermission(req: any, res: any, next: any) {
+  const user = req.user as any;
+  const guildId = req.params.guildId || req.body.guildId || req.query.guildId;
+  if (!user || !user.guilds) return res.status(403).json({ error: 'forbidden' });
+  const g = (user.guilds as any[]).find((x) => x.id === guildId);
+  if (!g) return res.status(403).json({ error: 'forbidden' });
+  const perms = BigInt(g.permissions);
+  const ADMIN = BigInt(0x8);
+  const MANAGE_GUILD = BigInt(0x20);
+  if ((perms & ADMIN) === ADMIN || (perms & MANAGE_GUILD) === MANAGE_GUILD) return next();
+  return res.status(403).json({ error: 'forbidden' });
+}
+
 // GET /api/logs/:guildId?page=&perPage=&action=&adminId=&memberId=&from=&to=&q=
-router.get('/:guildId', async (req, res) => {
+router.get('/:guildId', ensureGuildManagePermission, async (req, res) => {
   try {
     const guildId = req.params.guildId;
     const page = Math.max(1, Number(req.query.page) || 1);
@@ -44,7 +58,7 @@ router.get('/:guildId', async (req, res) => {
 });
 
 // GET /api/logs/:guildId/:logId
-router.get('/:guildId/:logId', async (req, res) => {
+router.get('/:guildId/:logId', ensureGuildManagePermission, async (req, res) => {
   try {
     const logId = Number(req.params.logId);
     const l = await prisma.log.findUnique({ where: { id: logId } });
