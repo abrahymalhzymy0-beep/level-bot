@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // Default to SQLite for local development. Set DATABASE_URL in env to use Postgres in production.
+  provider = "sqlite"
+  url = env("DATABASE_URL")
+}
+
+model Guild {
+  id                 Int      @id @default(autoincrement())
+  guildId            String   @unique
+  textXpPerMessage   Int      @default(10)
+  textXpCooldown     Int      @default(60) // seconds
+  voiceXpPerMinute   Int      @default(5)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  members            Member[]
+}
+
+model Member {
+  id        Int      @id @default(autoincrement())
+  discordId String
+  guildId   String
+  totalXp   Int      @default(0)
+  textXp    Int      @default(0)
+  voiceXp   Int      @default(0)
+  level     Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([discordId, guildId])
+  @@index([guildId])
+}
+
+model VoiceSession {
+  id        Int      @id @default(autoincrement())
+  memberId  Int
+  guildId   String
+  channelId String
+  startAt   DateTime
+  endAt     DateTime?
+
+  member    Member   @relation(fields: [memberId], references: [id])
+}
