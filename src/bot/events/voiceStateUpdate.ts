@@ -42,7 +42,28 @@ export async function handleVoiceStateUpdate(oldState: VoiceState, newState: Voi
 
         const memberRecord = await prisma.member.findUnique({ where: { id: open.memberId } });
         if (memberRecord) {
-          await prisma.member.update({ where: { id: memberRecord.id }, data: { voiceXp: { increment: xp }, totalXp: { increment: xp } } });
+          const prevVoice = memberRecord.voiceXp;
+          const prevTotal = memberRecord.totalXp;
+          const updated = await prisma.member.update({ where: { id: memberRecord.id }, data: { voiceXp: { increment: xp }, totalXp: { increment: xp } } });
+
+          // create log for voice xp awarded
+          try {
+            await prisma.log.create({
+              data: {
+                guildId,
+                action: 'voice_xp_awarded',
+                adminId: 'BOT',
+                targetMemberId: memberRecord.id,
+                prevVoiceXp: prevVoice,
+                newVoiceXp: updated.voiceXp,
+                prevTotalXp: prevTotal,
+                newTotalXp: updated.totalXp,
+                details: JSON.stringify({ minutes, channelId: open.channelId }),
+              },
+            });
+          } catch (err) {
+            console.error('failed to create voice_xp_awarded log', err);
+          }
         }
       }
 
@@ -69,7 +90,30 @@ export async function handleVoiceStateUpdate(oldState: VoiceState, newState: Voi
         const xp = minutes * perMinute;
 
         // update member XP
-        await prisma.member.update({ where: { id: member.id }, data: { voiceXp: { increment: xp }, totalXp: { increment: xp } } });
+        const before = await prisma.member.findUnique({ where: { id: member.id } });
+        const prevVoice = before?.voiceXp ?? 0;
+        const prevTotal = before?.totalXp ?? 0;
+
+        const updated = await prisma.member.update({ where: { id: member.id }, data: { voiceXp: { increment: xp }, totalXp: { increment: xp } } });
+
+        // create log
+        try {
+          await prisma.log.create({
+            data: {
+              guildId,
+              action: 'voice_xp_awarded',
+              adminId: 'BOT',
+              targetMemberId: member.id,
+              prevVoiceXp: prevVoice,
+              newVoiceXp: updated.voiceXp,
+              prevTotalXp: prevTotal,
+              newTotalXp: updated.totalXp,
+              details: JSON.stringify({ minutes, channelId: open.channelId }),
+            },
+          });
+        } catch (err) {
+          console.error('failed to create voice_xp_awarded log', err);
+        }
       }
     }
   } catch (err) {
@@ -106,7 +150,27 @@ export async function resumeVoiceSessions(client: Client) {
 
         const memberRecord = s.member;
         if (memberRecord) {
-          await prisma.member.update({ where: { id: memberRecord.id }, data: { voiceXp: { increment: xp }, totalXp: { increment: xp } } });
+          const prevVoice = memberRecord.voiceXp;
+          const prevTotal = memberRecord.totalXp;
+          const updated = await prisma.member.update({ where: { id: memberRecord.id }, data: { voiceXp: { increment: xp }, totalXp: { increment: xp } } });
+
+          try {
+            await prisma.log.create({
+              data: {
+                guildId: s.guildId,
+                action: 'voice_xp_awarded',
+                adminId: 'BOT',
+                targetMemberId: memberRecord.id,
+                prevVoiceXp: prevVoice,
+                newVoiceXp: updated.voiceXp,
+                prevTotalXp: prevTotal,
+                newTotalXp: updated.totalXp,
+                details: JSON.stringify({ minutes, resumed: true, channelId: s.channelId }),
+              },
+            });
+          } catch (err) {
+            console.error('failed to create voice_xp_awarded log on resume', err);
+          }
         }
       }
     } catch (err) {
