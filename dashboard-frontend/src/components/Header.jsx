@@ -17,6 +17,7 @@ export default function Header(){
         <Link to="/members" className="text-gray-300">Members</Link>
         <Link to="/leaderboard" className="text-gray-300">Leaderboard</Link>
         <Link to="/settings" className="text-gray-300">Settings</Link>
+        {user && <Link to="/logs" className="text-gray-300">Logs</Link>}
       </nav>
       <div>
         {user ? (
