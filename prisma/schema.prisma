@@ -17,6 +17,7 @@ model Guild {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   members            Member[]
+  logs               Log[]
 }
 
 model Member {
@@ -29,6 +30,9 @@ model Member {
   level     Int      @default(1)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  voiceSessions VoiceSession[]
+  logs          Log[]
 
   @@unique([discordId, guildId])
   @@index([guildId])
@@ -43,4 +47,29 @@ model VoiceSession {
   endAt     DateTime?
 
   member    Member   @relation(fields: [memberId], references: [id])
+}
+
+model Log {
+  id            Int      @id @default(autoincrement())
+  guildId       String
+  action        String
+  adminId       String?  // Discord ID of admin or 'BOT' for automatic events
+  targetMemberId Int?
+  targetMember  Member?  @relation(fields: [targetMemberId], references: [id])
+
+  prevTotalXp   Int?
+  newTotalXp    Int?
+  prevTextXp    Int?
+  newTextXp     Int?
+  prevVoiceXp   Int?
+  newVoiceXp    Int?
+  prevLevel     Int?
+  newLevel      Int?
+
+  details       String?  // free-form JSON or text with extra context
+  createdAt     DateTime @default(now())
+
+  @@index([guildId])
+  @@index([adminId])
+  @@index([targetMemberId])
 }
