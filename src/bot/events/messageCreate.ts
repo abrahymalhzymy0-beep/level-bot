@@ -48,7 +48,30 @@ export async function handleMessage(client: Client, message: Message) {
     // Check level up using the updated totalXp from the upsert result
     const newLevel = calculateLevel(member.totalXp);
     if (newLevel > member.level) {
+      const prevLevel = member.level;
+      const prevTotal = member.totalXp;
+
       await prisma.member.update({ where: { id: member.id }, data: { level: newLevel } });
+
+      // create log for level up
+      try {
+        await prisma.log.create({
+          data: {
+            guildId,
+            action: 'level_up',
+            adminId: 'BOT',
+            targetMemberId: member.id,
+            prevTotalXp: prevTotal,
+            newTotalXp: member.totalXp,
+            prevLevel,
+            newLevel,
+            details: JSON.stringify({ channelId: message.channel.id, messageId: message.id }),
+          },
+        });
+      } catch (err) {
+        console.error('failed to create level_up log', err);
+      }
+
       // send level up message (best-effort)
       try {
         await message.channel.send(`${message.author}, congratulations! You've reached level ${newLevel}!`);
