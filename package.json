@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "deploy-commands": "node deploy-commands.js",
-    "start": "npx prisma generate && tsx src/bot/index.ts",
+    "start": "npx prisma generate && npx prisma db push && tsx src/bot/index.ts",
     "start:node": "node index.js",
     "prisma:generate": "prisma generate",
     "postinstall": "prisma generate"
