@@ -1,28 +1,6 @@
 {
-  "name": "level-bot",
-  "version": "0.1.0",
-  "description": "Discord Level Bot - Phase 1: Bot with XP and Levels",
-  "main": "dist/bot/index.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/bot/index.ts",
-    "build": "tsc",
-    "start": "node dist/bot/index.js",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev --name init",
-    "register-commands": "ts-node src/bot/registerCommands.ts"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "MIT",
-  "dependencies": {
-    "@prisma/client": "^4.16.0",
-    "discord.js": "^14.11.0",
-    "dotenv": "^16.3.1"
-  },
-  "devDependencies": {
-    "prisma": "^4.16.0",
-    "ts-node": "^10.9.1",
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^5.2.2"
+    "deploy-commands": "node deploy-commands.js",
+    "start": "node index.js"
   }
 }
