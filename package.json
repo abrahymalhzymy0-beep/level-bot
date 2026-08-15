@@ -5,7 +5,11 @@
   "main": "index.js",
   "scripts": {
     "deploy-commands": "node deploy-commands.js",
-    "start": "npx prisma generate && npx prisma db push && tsx src/bot/index.ts",
+    "build:frontend": "cd dashboard-frontend && npm ci && npm run build",
+    "build": "npm run build:frontend",
+    "start:dashboard": "NODE_ENV=production SERVE_FRONTEND=true PORT=8080 npx tsx dashboard-backend/src/index.ts",
+    "start:bot": "npx tsx src/bot/index.ts",
+    "start": "concurrently \"npm run start:dashboard\" \"npm run start:bot\"",
     "start:node": "node index.js",
     "prisma:generate": "prisma generate",
     "postinstall": "prisma generate"
@@ -18,6 +22,7 @@
     "dotenv": "^16.0.0",
     "tsx": "4.23.12",
     "@prisma/client": "^5.0.0",
-    "prisma": "^5.0.0"
+    "prisma": "^5.0.0",
+    "concurrently": "^8.2.0"
   }
 }
