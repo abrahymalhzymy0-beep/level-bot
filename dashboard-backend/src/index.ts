@@ -5,13 +5,14 @@ import express from 'express';
 import session from 'express-session';
 import cors from 'cors';
 import passport from 'passport';
+import path from 'path';
 import { setupDiscordStrategy } from './auth';
 import guildRoutes from './routes/guilds';
 import memberRoutes from './routes/members';
 import logsRoutes from './routes/logs';
 import { prisma } from './lib/prisma';
 
-const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
+const PORT = process.env.PORT ? Number(process.env.PORT) : Number(process.env.NOW_PORT) || 8080;
 
 const app = express();
 app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173', credentials: true }));
@@ -67,6 +68,15 @@ app.use('/api/logs', ensureAuth, logsRoutes);
 app.get('/api/me', ensureAuth, (req: any, res) => {
   res.json({ user: req.user });
 });
+
+// Serve built frontend in production
+const distPath = path.join(__dirname, '..', '..', 'dashboard-frontend', 'dist');
+if (process.env.SERVE_FRONTEND === 'true' || process.env.NODE_ENV === 'production') {
+  app.use(express.static(distPath));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
 
 app.listen(PORT, async () => {
   console.log(`Dashboard backend listening on ${PORT}`);
