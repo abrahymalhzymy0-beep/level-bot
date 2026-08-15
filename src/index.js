@@ -45,44 +45,50 @@ client.on('ready', async () => {
 });
 
 client.on('messageCreate', async (message) => {
-  if (message.author.bot || !message.guild) return;
+  try {
+    if (message.author.bot || !message.guild) return;
 
-  const key = `${message.guild.id}:${message.author.id}`;
-  const last = lastXpAt.get(key) || 0;
-  const now = Date.now();
-  if (now - last < COOLDOWN_SECONDS * 1000) return; // cooldown
+    const key = `${message.guild.id}:${message.author.id}`;
+    const last = lastXpAt.get(key) || 0;
+    const now = Date.now();
+    if (now - last < COOLDOWN_SECONDS * 1000) return; // cooldown
 
-  // award XP (random small amount)
-  const gained = Math.floor(Math.random() * 15) + 10; // 10..24
-  const currentTotal = db.getUserXp(message.author.id, message.guild.id);
-  const newTotal = currentTotal + gained;
-  db.setUserXp(message.author.id, message.guild.id, newTotal);
-  lastXpAt.set(key, now);
+    // award XP (random small amount)
+    const gained = Math.floor(Math.random() * 15) + 10; // 10..24
+    const currentTotal = db.getUserXp(message.author.id, message.guild.id);
+    const newTotal = currentTotal + gained;
+    db.setUserXp(message.author.id, message.guild.id, newTotal);
+    lastXpAt.set(key, now);
 
-  // Optionally: notify user of level up (embed)
-  const before = xpUtil.levelForXp(currentTotal).level;
-  const after = xpUtil.levelForXp(newTotal).level;
-  if (after > before) {
-    try {
-      const avatarURL = message.author.displayAvatarURL({ extension: 'png', size: 256 });
+    // check for level up
+    const before = xpUtil.levelForXp(currentTotal).level;
+    const after = xpUtil.levelForXp(newTotal).level;
+    if (after > before) {
+      // prepare embed
       const levelInfo = xpUtil.levelForXp(newTotal);
-      const embed = new EmbedBuilder()
-        .setTitle('🎉 مبروك!')
-        .setDescription(`<@${message.author.id}> تهانينا على الترقية!`)
-        .addFields(
-          { name: 'المستوى الجديد', value: `${after}`, inline: true },
-          { name: 'النقاط داخل المستوى', value: `${levelInfo.xpIntoLevel} / ${levelInfo.xpForNext}`, inline: true }
-        )
-        .setThumbnail(avatarURL)
-        .setColor(0x00AE86)
-        .setTimestamp()
-        .setFooter({ text: `تهانينا ${message.author.username}` });
+      const avatarURL = message.author.displayAvatarURL({ extension: 'png', size: 256 });
+      const xpInto = levelInfo.xpIntoLevel || 0;
+      const xpForNext = levelInfo.xpForNext || 1;
+      const progressPercent = Math.floor((xpInto / xpForNext) * 100);
 
-      // Optional: send to a dedicated channel if LEVELUP_CHANNEL_ID is set in .env
+      const embed = new EmbedBuilder()
+        .setTitle('🎉 مبروك! لقد ارتقيت!')
+        .setDescription(`تهانينا <@${message.author.id}> — لقد وصلت إلى مستوى جديد!`)
+        .setColor(0x00AE86)
+        .setThumbnail(avatarURL)
+        .addFields(
+          { name: 'المستوى الجديد', value: `**${after}**`, inline: true },
+          { name: 'النقاط داخل المستوى', value: `\`${xpInto} / ${xpForNext}\` (${progressPercent}%)`, inline: true },
+          { name: 'مجموع النقاط (XP)', value: `\`${newTotal} XP\``, inline: true }
+        )
+        .setFooter({ text: `استمر هكذا!`, iconURL: avatarURL })
+        .setTimestamp();
+
+      // send to configured channel if provided, else send in same channel
       const levelUpChannelId = process.env.LEVELUP_CHANNEL_ID;
       if (levelUpChannelId) {
         const ch = message.guild.channels.cache.get(levelUpChannelId);
-        if (ch && ch.isTextBased && ch.isTextBased()) {
+        if (ch && typeof ch.isTextBased === 'function' && ch.isTextBased()) {
           await ch.send({ embeds: [embed] });
         } else {
           await message.channel.send({ embeds: [embed] });
@@ -90,9 +96,9 @@ client.on('messageCreate', async (message) => {
       } else {
         await message.channel.send({ embeds: [embed] });
       }
-    } catch (e) {
-      console.error('Failed to send level-up embed:', e);
     }
+  } catch (err) {
+    console.error('Error in messageCreate handler:', err);
   }
 });
 
