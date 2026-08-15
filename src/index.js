@@ -19,12 +19,28 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
 
+// handle unhandled rejections so bot doesn't crash
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
 // load commands
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
-for (const file of fs.readdirSync(commandsPath).filter(f => f.endsWith('.js'))) {
-  const command = require(path.join(commandsPath, file));
-  client.commands.set(command.data.name, command);
+if (fs.existsSync(commandsPath)) {
+  for (const file of fs.readdirSync(commandsPath).filter(f => f.endsWith('.js'))) {
+    try {
+      const command = require(path.join(commandsPath, file));
+      if (command && command.data && command.execute) client.commands.set(command.data.name, command);
+    } catch (e) {
+      console.warn('Failed to load command file', file, e);
+    }
+  }
+} else {
+  console.warn('Commands path not found:', commandsPath);
 }
 
 // in-memory cooldowns map: { `${guildId}:${userId}` -> timestamp }
@@ -35,7 +51,7 @@ client.on('ready', async () => {
 
   if (DEPLOY_ON_START) {
     console.log('DEPLOY_ON_START is true: attempting to register commands on startup...');
-    // call deploy-commands.js programmatically
+    // call deploy-commands.js programmatically if present
     try {
       await require('../deploy-commands')();
     } catch (e) {
@@ -108,13 +124,20 @@ client.on('interactionCreate', async (interaction) => {
   const command = client.commands.get(interaction.commandName);
   if (!command) return;
   try {
+    // If a command takes longer, it should call interaction.deferReply() itself — but we also allow commands
+    // that forgot to defer to be wrapped safely. We check if the command execution returns a promise that
+    // hasn't replied; however there's no reliable way to know, so we recommend adding deferReply in commands.
     await command.execute(interaction);
   } catch (err) {
     console.error('Command error', err);
-    if (interaction.deferred || interaction.replied) {
-      await interaction.editReply({ content: 'There was an error while executing this command.' });
-    } else {
-      await interaction.reply({ content: 'There was an error while executing this command.', ephemeral: true });
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply({ content: 'هناك خطأ أثناء تنفيذ الأمر.' });
+      } else {
+        await interaction.reply({ content: 'هناك خطأ أثناء تنفيذ الأمر.', ephemeral: true });
+      }
+    } catch (e) {
+      console.error('Failed to send error reply to interaction:', e);
     }
   }
 });
