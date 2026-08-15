@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, Collection } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, EmbedBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const db = require('./lib/db');
@@ -59,14 +59,39 @@ client.on('messageCreate', async (message) => {
   db.setUserXp(message.author.id, message.guild.id, newTotal);
   lastXpAt.set(key, now);
 
-  // Optionally: notify user of level up (silent by default)
+  // Optionally: notify user of level up (embed)
   const before = xpUtil.levelForXp(currentTotal).level;
   const after = xpUtil.levelForXp(newTotal).level;
   if (after > before) {
     try {
-      await message.channel.send(`${message.author}, congratulations! You reached level ${after}!`);
+      const avatarURL = message.author.displayAvatarURL({ extension: 'png', size: 256 });
+      const levelInfo = xpUtil.levelForXp(newTotal);
+      const embed = new EmbedBuilder()
+        .setTitle('🎉 مبروك!')
+        .setDescription(`<@${message.author.id}> تهانينا على الترقية!`)
+        .addFields(
+          { name: 'المستوى الجديد', value: `${after}`, inline: true },
+          { name: 'النقاط داخل المستوى', value: `${levelInfo.xpIntoLevel} / ${levelInfo.xpForNext}`, inline: true }
+        )
+        .setThumbnail(avatarURL)
+        .setColor(0x00AE86)
+        .setTimestamp()
+        .setFooter({ text: `تهانينا ${message.author.username}` });
+
+      // Optional: send to a dedicated channel if LEVELUP_CHANNEL_ID is set in .env
+      const levelUpChannelId = process.env.LEVELUP_CHANNEL_ID;
+      if (levelUpChannelId) {
+        const ch = message.guild.channels.cache.get(levelUpChannelId);
+        if (ch && ch.isTextBased && ch.isTextBased()) {
+          await ch.send({ embeds: [embed] });
+        } else {
+          await message.channel.send({ embeds: [embed] });
+        }
+      } else {
+        await message.channel.send({ embeds: [embed] });
+      }
     } catch (e) {
-      // ignore if can't send
+      console.error('Failed to send level-up embed:', e);
     }
   }
 });
