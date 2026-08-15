@@ -1,28 +1,19 @@
 {
   "name": "level-bot",
   "version": "1.0.0",
-  "description": "Discord level/Xp bot",
-  "main": "index.js",
+  "description": "Discord level bot with rank card",
+  "main": "src/index.js",
   "scripts": {
-    "deploy-commands": "node deploy-commands.js",
-    "build:frontend": "cd dashboard-frontend && npm ci && npm run build",
-    "build": "npm run build:frontend",
-    "start:dashboard": "NODE_ENV=production SERVE_FRONTEND=true PORT=8080 npx tsx dashboard-backend/src/index.ts",
-    "start:bot": "npx tsx src/bot/index.ts",
-    "start": "concurrently \"npm run start:dashboard\" \"npm run start:bot\"",
-    "start:node": "node index.js",
-    "prisma:generate": "prisma generate",
-    "postinstall": "prisma generate"
+    "start": "node src/index.js",
+    "deploy-commands": "node deploy-commands.js"
   },
   "engines": {
-    "node": ">=16.9.0"
+    "node": ">=18"
   },
   "dependencies": {
+    "better-sqlite3": "^8.0.1",
+    "canvas": "^2.11.0",
     "discord.js": "^14.11.0",
-    "dotenv": "^16.0.0",
-    "tsx": "4.23.12",
-    "@prisma/client": "^5.0.0",
-    "prisma": "^5.0.0",
-    "concurrently": "^8.2.0"
+    "dotenv": "^16.1.4"
   }
 }
