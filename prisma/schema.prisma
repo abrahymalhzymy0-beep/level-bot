@@ -31,6 +31,8 @@ model Member {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  guild     Guild    @relation(fields: [guildId], references: [guildId])
+
   voiceSessions VoiceSession[]
   logs          Log[]
 
@@ -56,6 +58,8 @@ model Log {
   adminId       String?  // Discord ID of admin or 'BOT' for automatic events
   targetMemberId Int?
   targetMember  Member?  @relation(fields: [targetMemberId], references: [id])
+
+  guild         Guild    @relation(fields: [guildId], references: [guildId])
 
   prevTotalXp   Int?
   newTotalXp    Int?
